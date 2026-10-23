@@ -616,3 +616,38 @@ dialog::backdrop { background: rgba(5, 6, 15, 0.6); backdrop-filter: blur(6px); 
 .auth-card .link-btn { margin: .75rem 0 1rem; }
 body.auth-locked .app, body.auth-locked .fab, body.auth-locked #task-dialog, body.auth-locked #toast { visibility: hidden; }
 @media (max-width: 520px) { .auth-card { padding: 1.4rem; } }
+
+/* Corrección de visibilidad de botones */
+button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.btn-uni {
+  background: linear-gradient(135deg, #6B46F0, #0BA5C9) !important;
+  color: #FFFFFF !important;
+}
+
+.btn-gym {
+  background: linear-gradient(135deg, #F97316, #E11D74) !important;
+  color: #FFFFFF !important;
+}
+
+.nav-item {
+  color: var(--text, #161A33) !important;
+}
+
+.nav-item.active {
+  background: #6B46F0 !important;
+  color: #FFFFFF !important;
+}
+
+.chip {
+  color: var(--text, #161A33);
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
