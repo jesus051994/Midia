@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A0B14">
+<title>Mi día</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<div class="app">
+
+  <!-- ============ NAVEGACIÓN ============ -->
+  <aside class="side">
+    <div class="brand">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M12 2c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-9z"/></svg>
+      </span>
+      <div class="brand-text">
+        <b>Mi día</b>
+        <small>Estudia y entrena</small>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav" aria-label="Secciones">
+      <span class="nav-indicator" id="nav-ind"></span>
+      <button class="nav-item active" data-tab="hoy">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span>Hoy</span>
+      </button>
+      <button class="nav-item" data-tab="universidad">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M22 9L12 4 2 9l10 5 10-5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/><path d="M22 9v6"/></svg>
+        <span>Universidad</span>
+      </button>
+      <button class="nav-item" data-tab="gym">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>
+        <span>Gym</span>
+      </button>
+    </nav>
+
+    <div class="side-card">
+      <span class="flame">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M12 2c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-9z"/></svg>
+      </span>
+      <div>
+        <b id="side-streak">0 días</b>
+        <small>de racha en el gym</small>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENIDO ============ -->
+  <div class="content">
+
+    <header class="topbar">
+      <div>
+        <h1 id="page-title">Hoy</h1>
+        <p id="today-label" class="muted"></p>
+      </div>
+      <div class="menu-wrap">
+        <button class="icon-btn" id="menu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Más opciones">
+          <svg viewBox="0 0 24 24" class="ic fill"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
+        </button>
+        <div class="menu" id="menu" hidden>
+          <button class="menu-item" id="theme-btn">
+            <svg viewBox="0 0 24 24" class="ic"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            <span id="theme-label">Cambiar a modo claro</span>
+          </button>
+          <button class="menu-item" id="export-btn">
+            <svg viewBox="0 0 24 24" class="ic"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            <span>Exportar respaldo</span>
+          </button>
+          <button class="menu-item" id="import-btn">
+            <svg viewBox="0 0 24 24" class="ic"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg>
+            <span>Importar respaldo</span>
+          </button>
+          <input type="file" id="import-file" accept="application/json" hidden>
+        </div>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- ================= HOY ================= -->
+      <section id="tab-hoy" class="panel">
+        <div class="hero card">
+          <div>
+            <p class="eyebrow" id="greeting">Hola</p>
+            <h2 class="hero-title" id="hero-title">¿Qué toca hoy?</h2>
+            <form id="quick-form" class="quick-form">
+              <input type="text" id="quick-title" placeholder="Anota algo para hoy y presiona Enter" required>
+              <button type="submit" class="btn btn-uni">Agregar</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat card"><span class="stat-num" id="s-pending">0</span><span class="stat-label">Pendientes</span></div>
+          <div class="stat card"><span class="stat-num danger" id="s-overdue">0</span><span class="stat-label">Vencidas</span></div>
+          <div class="stat card"><span class="stat-num ok" id="s-done-week">0</span><span class="stat-label">Hechas esta semana</span></div>
+          <div class="stat card"><span class="stat-num hot" id="s-gym-month">0</span><span class="stat-label">Días de gym este mes</span></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Para hoy</h3><span class="badge" id="today-count">0</span></div>
+            <ul class="task-list" id="today-tasks"></ul>
+            <p class="empty" id="today-empty">Nada pendiente para hoy. Disfruta el respiro.</p>
+          </div>
+
+          <div class="card ring-card">
+            <div class="card-head"><h3>Gym esta semana</h3></div>
+            <div class="ring-wrap">
+              <svg viewBox="0 0 120 120" class="ring">
+                <defs>
+                  <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="var(--gym1)"/>
+                    <stop offset="100%" stop-color="var(--gym2)"/>
+                  </linearGradient>
+                </defs>
+                <circle class="ring-bg" cx="60" cy="60" r="52"/>
+                <circle class="ring-fg" id="home-ring" cx="60" cy="60" r="52"/>
+              </svg>
+              <div class="ring-center">
+                <span class="ring-num"><span id="home-week-count">0</span><small>/<span id="home-goal">4</span></small></span>
+                <span class="ring-sub">días</span>
+              </div>
+            </div>
+            <p class="muted center" id="home-streak"></p>
+            <button class="btn btn-gym btn-block" id="home-gym-toggle">Marcar que entrené hoy</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= UNIVERSIDAD ================= -->
+      <section id="tab-universidad" class="panel" hidden>
+
+        <div class="uni-top">
+          <div class="card mini">
+            <span class="mini-label">Pendientes</span>
+            <span class="mini-num" id="u-pending">0</span>
+          </div>
+          <div class="card mini exam">
+            <span class="mini-label">Próximo examen</span>
+            <span class="mini-num" id="u-exam-days">—</span>
+            <span class="mini-sub" id="u-exam-name">Sin exámenes a la vista</span>
+          </div>
+          <div class="card mini">
+            <span class="mini-label">Hechas esta semana</span>
+            <span class="mini-num ok" id="u-done-week">0</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar">
+            <div class="filters" id="task-filters">
+              <button class="chip active" data-filter="pendientes">Pendientes</button>
+              <button class="chip" data-filter="hoy">Hoy</button>
+              <button class="chip" data-filter="semana">Esta semana</button>
+              <button class="chip" data-filter="vencidas">Vencidas</button>
+              <button class="chip" data-filter="hechas">Hechas</button>
+              <button class="chip" data-filter="todas">Todas</button>
+            </div>
+            <div class="toolbar-right">
+              <input type="text" id="t-search" placeholder="Buscar...">
+              <button class="chip toggle" id="group-toggle" aria-pressed="false">Agrupar por materia</button>
+            </div>
+          </div>
+
+          <div id="task-container"></div>
+          <p class="empty" id="task-empty">No hay tareas en esta vista.</p>
+          <button class="link-btn" id="clear-done">Borrar tareas hechas</button>
+        </div>
+      </section>
+
+      <!-- ================= GYM ================= -->
+      <section id="tab-gym" class="panel" hidden>
+
+        <div class="gym-top">
+          <div class="card ring-card">
+            <div class="card-head"><h3>Meta semanal</h3></div>
+            <div class="ring-wrap">
+              <svg viewBox="0 0 120 120" class="ring">
+                <circle class="ring-bg" cx="60" cy="60" r="52"/>
+                <circle class="ring-fg" id="gym-ring" cx="60" cy="60" r="52"/>
+              </svg>
+              <div class="ring-center">
+                <span class="ring-num"><span id="g-week">0</span><small>/<span id="g-goal">4</span></small></span>
+                <span class="ring-sub">días</span>
+              </div>
+            </div>
+            <div class="goal-ctl">
+              <button class="icon-btn sm" id="goal-minus" aria-label="Bajar meta">−</button>
+              <span class="muted">Meta de la semana</span>
+              <button class="icon-btn sm" id="goal-plus" aria-label="Subir meta">+</button>
+            </div>
+          </div>
+
+          <div class="gym-stats">
+            <div class="stat card"><span class="stat-num hot" id="g-month">0</span><span class="stat-label">Días este mes</span></div>
+            <div class="stat card"><span class="stat-num" id="g-streak">0</span><span class="stat-label">Racha actual</span></div>
+            <div class="stat card"><span class="stat-num" id="g-minutes">0</span><span class="stat-label">Minutos este mes</span></div>
+            <div class="stat card"><span class="stat-num" id="g-total">0</span><span class="stat-label">Entrenos en total</span></div>
+          </div>
+        </div>
+
+        <div class="grid-side">
+          <div class="card">
+            <div class="month-picker">
+              <button class="icon-btn sm" id="g-prev" aria-label="Mes anterior">←</button>
+              <span id="g-month-label"></span>
+              <button class="icon-btn sm" id="g-next" aria-label="Mes siguiente">→</button>
+            </div>
+            <div class="cal-head"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+            <div class="cal" id="g-cal"></div>
+            <p class="muted small">Toca un día para registrar o editar tu entrenamiento.</p>
+          </div>
+
+          <div class="card">
+            <h3 id="g-form-title">Registrar entrenamiento</h3>
+            <form id="gym-form">
+              <div class="field">
+                <label for="g-date">Fecha</label>
+                <input type="date" id="g-date" required>
+              </div>
+              <div class="field">
+                <label>Tipo de entrenamiento</label>
+                <div class="seg-wrap" id="g-types"></div>
+              </div>
+              <div class="field">
+                <label for="g-min">Duración (minutos)</label>
+                <input type="number" id="g-min" min="0" step="5" placeholder="60">
+              </div>
+              <div class="field">
+                <label for="g-notes">Notas (opcional)</label>
+                <input type="text" id="g-notes" placeholder="Pesos, sensaciones, récords...">
+              </div>
+              <button type="submit" class="btn btn-gym btn-block">Guardar día</button>
+              <button type="button" class="link-btn danger" id="g-remove" hidden>Quitar este día</button>
+            </form>
+
+            <h4 class="sub">Últimos entrenamientos</h4>
+            <ul class="gym-log" id="g-log"></ul>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- Botón flotante: nueva tarea -->
+<button class="fab" id="fab" aria-label="Nueva tarea">
+  <svg viewBox="0 0 24 24" class="ic"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- ============ DIÁLOGO NUEVA TAREA ============ -->
+<dialog id="task-dialog">
+  <form id="task-form" class="dialog-body">
+    <div class="dialog-head">
+      <h3>Nueva tarea de universidad</h3>
+      <button type="button" class="icon-btn sm" id="dialog-close" aria-label="Cerrar">×</button>
+    </div>
+
+    <div class="field">
+      <label for="t-title">¿Qué tienes pendiente?</label>
+      <input type="text" id="t-title" placeholder="Ej: Entregar informe de laboratorio" required>
+    </div>
+
+    <div class="field">
+      <label>Tipo</label>
+      <div class="seg" id="seg-type">
+        <label><input type="radio" name="t-type" value="Tarea" checked><span>Tarea</span></label>
+        <label><input type="radio" name="t-type" value="Examen"><span>Examen</span></label>
+        <label><input type="radio" name="t-type" value="Proyecto"><span>Proyecto</span></label>
+        <label><input type="radio" name="t-type" value="Lectura"><span>Lectura</span></label>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="t-course">Materia / curso</label>
+        <input type="text" id="t-course" list="course-list" placeholder="Ej: Cálculo II">
+        <datalist id="course-list"></datalist>
+      </div>
+      <div class="field">
+        <label for="t-due">Fecha límite</label>
+        <input type="date" id="t-due">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Prioridad</label>
+      <div class="seg" id="seg-priority">
+        <label class="p-alta"><input type="radio" name="t-priority" value="alta"><span>Alta</span></label>
+        <label class="p-media"><input type="radio" name="t-priority" value="media" checked><span>Media</span></label>
+        <label class="p-baja"><input type="radio" name="t-priority" value="baja"><span>Baja</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="t-notes">Notas (opcional)</label>
+      <input type="text" id="t-notes" placeholder="Capítulos, enlaces, detalles...">
+    </div>
+
+    <button type="submit" class="btn btn-uni btn-block">Guardar tarea</button>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
