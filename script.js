@@ -12,10 +12,8 @@ const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-mo
 
 let state = loadState();
 let supabaseClient = null;
-const SHARED_ID = '00000000-0000-4000-8000-000000000001';
-let currentUser = { id: SHARED_ID };
-let lastCloudSnapshot = '';
-let isApplyingCloud = false;
+const SHARED_UID = '00000000-0000-4000-8000-000000000001';
+let currentUser = { id: SHARED_UID };
 let cloudSyncQueue = Promise.resolve();
 let cloudSyncTimer = null;
 let taskFilter = 'pendientes';
@@ -40,10 +38,9 @@ function loadState() {
 function saveState() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); }
   catch (e) { toast('No se pudo guardar en este navegador'); }
-  if (supabaseClient && !isApplyingCloud) {
+  if (supabaseClient) {
     clearTimeout(cloudSyncTimer);
     cloudSyncTimer = setTimeout(() => {
-      cloudSyncTimer = null;
       cloudSyncQueue = cloudSyncQueue.then(syncCloudState).catch((err) => {
         console.error('Error sincronizando Mi día:', err);
         toast('No se pudo sincronizar. Revisa tu conexión.');
@@ -54,7 +51,7 @@ function saveState() {
 
 async function syncCloudState() {
   if (!supabaseClient) return;
-  const uid = SHARED_ID;
+  const uid = SHARED_UID;
   const taskRows = state.tasks.map(t => ({
     id: t.id, usuario_id: uid, titulo: t.title, notas: t.notes || '',
     fecha_limite: t.due || null, prioridad: t.priority || 'media', tipo: t.type || 'Tarea',
@@ -80,11 +77,10 @@ async function syncCloudState() {
 
   const { error: prefErr } = await supabaseClient.from('preferencias').upsert({ usuario_id: uid, meta_semanal: state.goal }, { onConflict: 'usuario_id' });
   if (prefErr) throw prefErr;
-  lastCloudSnapshot = JSON.stringify(state);
 }
 
 async function loadCloudState() {
-  const uid = SHARED_ID;
+  const uid = SHARED_UID;
   const [tasksRes, gymRes, prefRes] = await Promise.all([
     supabaseClient.from('tareas').select('*').eq('usuario_id', uid),
     supabaseClient.from('entrenamientos').select('*').eq('usuario_id', uid),
@@ -813,66 +809,51 @@ function initApp() {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveIndicator);
 }
 
-// ================= Conexión compartida Supabase (sin inicio de sesión) =================
+// ================= Conexión compartida Supabase =================
 (function setupSharedCloud() {
   const url = window.MIDIA_SUPABASE_URL;
   const key = window.MIDIA_SUPABASE_PUBLISHABLE_KEY;
   if (!window.supabase || !url || !key || key === 'PEGA_AQUI_TU_CLAVE_PUBLICABLE') {
     console.error('Mi día: falta configurar la clave publicable en config.js.');
-    toast('Falta configurar Supabase en config.js.');
+    toast('No se pudo conectar con la agenda compartida. Revisa config.js.');
     initApp();
     return;
   }
   supabaseClient = window.supabase.createClient(url, key);
-
-  function snapshot() { return JSON.stringify(state); }
-
-  async function start() {
+  currentUser = { id: SHARED_UID };
+  (async () => {
     try {
-      const localState = loadState();
       await loadCloudState();
-      const cloudHasData = state.tasks.length > 0 || Object.keys(state.gym).length > 0;
-      const localHasData = localState.tasks.length > 0 || Object.keys(localState.gym).length > 0;
-      if (!cloudHasData && localHasData) {
-        state = localState;
-        await syncCloudState();
-      }
-      lastCloudSnapshot = snapshot();
-      hideSharedGate();
       initApp();
+      // Refresca los cambios de otras personas mientras la página permanece abierta.
+      setInterval(async () => {
+        if (document.hidden || !supabaseClient) return;
+        try {
+          const [tasksRes, gymRes, prefRes] = await Promise.all([
+            supabaseClient.from('tareas').select('*').eq('usuario_id', SHARED_UID),
+            supabaseClient.from('entrenamientos').select('*').eq('usuario_id', SHARED_UID),
+            supabaseClient.from('preferencias').select('*').eq('usuario_id', SHARED_UID).maybeSingle()
+          ]);
+          if (tasksRes.error) throw tasksRes.error;
+          if (gymRes.error) throw gymRes.error;
+          if (prefRes.error) throw prefRes.error;
+          const remote = {
+            tasks: (tasksRes.data || []).map(t => ({ id: t.id, title: t.titulo, notes: t.notas || '', due: t.fecha_limite || '', priority: t.prioridad || 'media', type: t.tipo || 'Tarea', course: t.materia || '', done: !!t.completada, doneAt: t.completada_en || null, createdAt: (t.creada_en || '').slice(0,10) || todayISO() })),
+            gym: Object.fromEntries((gymRes.data || []).map(g => [g.fecha, { type: g.tipo || 'Full body', minutes: g.minutos || 0, notes: g.notas || '' }])),
+            goal: prefRes.data ? prefRes.data.meta_semanal : 4
+          };
+          // No pisar cambios locales que todavía están pendientes de guardarse.
+          if (!cloudSyncTimer) {
+            state = remote;
+            localStorage.setItem(KEY, JSON.stringify(state));
+            renderAll();
+          }
+        } catch (err) { console.error('Error actualizando agenda compartida:', err); }
+      }, 5000);
     } catch (err) {
-      console.error('Error conectando Mi día:', err);
-      toast('No se pudo conectar con la agenda compartida. Revisa la configuración de Supabase.');
+      console.error('Error cargando agenda compartida:', err);
       initApp();
+      toast('No se pudo cargar la agenda compartida. Revisa las políticas de Supabase.');
     }
-  }
-
-  // Consulta periódica para que los cambios se vean también en otros dispositivos abiertos.
-  async function refreshShared() {
-    if (!supabaseClient || document.hidden || cloudSyncTimer) return;
-    try {
-      const before = lastCloudSnapshot;
-      isApplyingCloud = true;
-      await loadCloudState();
-      const after = snapshot();
-      if (after !== before) {
-        lastCloudSnapshot = after;
-        renderAll();
-      }
-    } catch (err) {
-      console.warn('No se pudo actualizar la agenda compartida:', err);
-    } finally {
-      isApplyingCloud = false;
-    }
-  }
-  setInterval(refreshShared, 5000);
-  start();
+  })();
 })();
-
-function hideSharedGate() {
-  const gate = $('auth-screen');
-  if (gate) gate.remove();
-  document.body.classList.remove('auth-locked');
-  const signout = $('signout-btn');
-  if (signout) signout.hidden = true;
-}
