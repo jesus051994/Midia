@@ -1,0 +1,14 @@
+MI DÍA CON SUPABASE — INSTRUCCIONES
+
+1) En config.js, reemplaza PEGA_AQUI_TU_CLAVE_PUBLICABLE por tu clave publicable sb_publishable_... del proyecto midia. No uses una clave secret ni service_role.
+2) Guarda los cuatro archivos juntos: index.html, style.css, script.js y config.js.
+3) En GitHub, abre el repositorio jesus051994/Midia y reemplaza/sube los cuatro archivos en la raíz. Asegúrate de que config.js también se suba.
+4) En Supabase > Authentication > URL Configuration, configura Site URL con la URL final de GitHub Pages, por ejemplo https://jesus051994.github.io/Midia/ (respeta mayúsculas/minúsculas del repositorio). Añade esa URL a Redirect URLs si aparece la opción.
+5) En Supabase > Authentication > Providers > Email, decide si quieres exigir confirmación por correo. Si la confirmación está activa, confirma el correo antes de iniciar sesión.
+6) La primera vez crea tu cuenta desde la pantalla de Mi día. Usa el mismo correo y contraseña para entrar en tu computadora y celular.
+
+IMPORTANTE:
+- Las tablas esperadas son tareas, entrenamientos y preferencias, creadas con el SQL que se ejecutó en el proyecto midia.
+- Esta versión sincroniza los cambios de tareas y entrenamientos con la nube después de iniciar sesión.
+- Los datos antiguos que existan solo en localStorage no se suben automáticamente. Exporta un respaldo desde el menú antes de cambiar, si tienes datos importantes en la versión local.
+- Nunca publiques claves secret/service_role ni compartas tu contraseña.

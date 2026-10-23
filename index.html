@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0A0B14">
 <title>Mi día</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -76,6 +77,10 @@
           <button class="menu-item" id="import-btn">
             <svg viewBox="0 0 24 24" class="ic"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg>
             <span>Importar respaldo</span>
+          </button>
+          <button class="menu-item" id="signout-btn" hidden>
+            <svg viewBox="0 0 24 24" class="ic"><path d="M10 17l5-5-5-5M15 12H3M21 3v18"/></svg>
+            <span>Cerrar sesión</span>
           </button>
           <input type="file" id="import-file" accept="application/json" hidden>
         </div>
@@ -312,6 +317,25 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<div id="auth-screen" class="auth-screen">
+  <section class="auth-card">
+    <div class="auth-mark">✦</div>
+    <p class="eyebrow">Tu espacio personal</p>
+    <h1>Mi día</h1>
+    <p class="muted auth-intro">Inicia sesión para sincronizar tus tareas y entrenamientos entre tus dispositivos.</p>
+    <form id="auth-form">
+      <div class="field"><label for="auth-email">Correo electrónico</label><input id="auth-email" type="email" autocomplete="email" required placeholder="tu@correo.com"></div>
+      <div class="field"><label for="auth-password">Contraseña</label><input id="auth-password" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo 6 caracteres"></div>
+      <button class="btn btn-uni btn-block" id="auth-submit" type="submit">Iniciar sesión</button>
+    </form>
+    <button class="link-btn" id="auth-toggle" type="button">¿Primera vez? Crear cuenta</button>
+    <p id="auth-message" class="auth-message" role="status"></p>
+    <p class="muted small">Tus datos se guardarán en tu cuenta privada.</p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

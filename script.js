@@ -11,6 +11,10 @@ const RING_LEN = 2 * Math.PI * 52; // circunferencia del anillo (r = 52)
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let state = loadState();
+let supabaseClient = null;
+let currentUser = null;
+let cloudSyncQueue = Promise.resolve();
+let cloudSyncTimer = null;
 let taskFilter = 'pendientes';
 let groupByCourse = false;
 let calMonth = startOfMonth(new Date());
@@ -31,12 +35,80 @@ function loadState() {
 }
 
 function saveState() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch (e) {
-    toast('No se pudo guardar en este navegador');
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch (e) { toast('No se pudo guardar en este navegador'); }
+  if (currentUser && supabaseClient) {
+    clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(() => {
+      cloudSyncQueue = cloudSyncQueue.then(syncCloudState).catch((err) => {
+        console.error('Error sincronizando Mi día:', err);
+        toast('No se pudo sincronizar. Revisa tu conexión.');
+      });
+    }, 250);
   }
 }
+
+async function syncCloudState() {
+  if (!currentUser || !supabaseClient) return;
+  const uid = currentUser.id;
+  const taskRows = state.tasks.map(t => ({
+    id: t.id, usuario_id: uid, titulo: t.title, notas: t.notes || '',
+    fecha_limite: t.due || null, prioridad: t.priority || 'media', tipo: t.type || 'Tarea',
+    materia: courseOf(t), completada: !!t.done, completada_en: t.doneAt || null,
+    creada_en: t.createdAt ? new Date(t.createdAt + 'T12:00:00').toISOString() : new Date().toISOString()
+  }));
+  const { data: oldTasks, error: oldTaskErr } = await supabaseClient.from('tareas').select('id').eq('usuario_id', uid);
+  if (oldTaskErr) throw oldTaskErr;
+  const taskIds = new Set(taskRows.map(t => t.id));
+  const deleteTaskIds = (oldTasks || []).filter(t => !taskIds.has(t.id)).map(t => t.id);
+  if (deleteTaskIds.length) { const { error } = await supabaseClient.from('tareas').delete().in('id', deleteTaskIds); if (error) throw error; }
+  if (taskRows.length) { const { error } = await supabaseClient.from('tareas').upsert(taskRows); if (error) throw error; }
+
+  const gymRows = Object.entries(state.gym).map(([fecha, e]) => ({
+    usuario_id: uid, fecha, tipo: e.type || 'Full body', minutos: Number(e.minutes) || 0, notas: e.notes || ''
+  }));
+  const { data: oldGym, error: oldGymErr } = await supabaseClient.from('entrenamientos').select('id,fecha').eq('usuario_id', uid);
+  if (oldGymErr) throw oldGymErr;
+  const gymDates = new Set(gymRows.map(g => g.fecha));
+  const deleteGymIds = (oldGym || []).filter(g => !gymDates.has(g.fecha)).map(g => g.id);
+  if (deleteGymIds.length) { const { error } = await supabaseClient.from('entrenamientos').delete().in('id', deleteGymIds); if (error) throw error; }
+  if (gymRows.length) { const { error } = await supabaseClient.from('entrenamientos').upsert(gymRows, { onConflict: 'usuario_id,fecha' }); if (error) throw error; }
+
+  const { error: prefErr } = await supabaseClient.from('preferencias').upsert({ usuario_id: uid, meta_semanal: state.goal }, { onConflict: 'usuario_id' });
+  if (prefErr) throw prefErr;
+}
+
+async function loadCloudState() {
+  const uid = currentUser.id;
+  const [tasksRes, gymRes, prefRes] = await Promise.all([
+    supabaseClient.from('tareas').select('*').eq('usuario_id', uid),
+    supabaseClient.from('entrenamientos').select('*').eq('usuario_id', uid),
+    supabaseClient.from('preferencias').select('*').eq('usuario_id', uid).maybeSingle()
+  ]);
+  if (tasksRes.error) throw tasksRes.error;
+  if (gymRes.error) throw gymRes.error;
+  if (prefRes.error) throw prefRes.error;
+  state = {
+    tasks: (tasksRes.data || []).map(t => ({ id: t.id, title: t.titulo, notes: t.notas || '', due: t.fecha_limite || '', priority: t.prioridad || 'media', type: t.tipo || 'Tarea', course: t.materia || '', done: !!t.completada, doneAt: t.completada_en || null, createdAt: (t.creada_en || '').slice(0,10) || todayISO() })),
+    gym: Object.fromEntries((gymRes.data || []).map(g => [g.fecha, { type: g.tipo || 'Full body', minutes: g.minutos || 0, notes: g.notas || '' }])),
+    goal: prefRes.data ? prefRes.data.meta_semanal : 4
+  };
+  localStorage.setItem(KEY, JSON.stringify(state));
+  if (!prefRes.data) await syncCloudState();
+}
+
+function showAuth(message = '') {
+  document.body.classList.add('auth-locked');
+  $('auth-screen').hidden = false;
+  $('auth-message').textContent = message;
+}
+
+function hideAuth() {
+  $('auth-screen').hidden = true;
+  document.body.classList.remove('auth-locked');
+  $('signout-btn').hidden = false;
+}
+
 
 // ================= Utilidades =================
 
@@ -718,7 +790,7 @@ function renderAll() {
   renderGym();
 }
 
-(function init() {
+function initApp() {
   let theme = null;
   try { theme = localStorage.getItem(THEME_KEY); } catch (e) { /* ignorar */ }
   if (theme !== 'light' && theme !== 'dark') {
@@ -734,4 +806,67 @@ function renderAll() {
 
   // Reposicionar el indicador cuando las fuentes terminan de cargar
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveIndicator);
+}
+
+// ================= Cuenta y conexión Supabase =================
+(function setupCloudAuth() {
+  const url = window.MIDIA_SUPABASE_URL;
+  const key = window.MIDIA_SUPABASE_PUBLISHABLE_KEY;
+  if (!window.supabase || !url || !key || key === 'PEGA_AQUI_TU_CLAVE_PUBLICABLE') {
+    showAuth('Falta configurar la clave publicable en config.js.');
+    $('auth-submit').disabled = true;
+    return;
+  }
+  supabaseClient = window.supabase.createClient(url, key);
+  let creatingAccount = false;
+  $('auth-toggle').addEventListener('click', () => {
+    creatingAccount = !creatingAccount;
+    $('auth-submit').textContent = creatingAccount ? 'Crear cuenta' : 'Iniciar sesión';
+    $('auth-toggle').textContent = creatingAccount ? 'Ya tengo cuenta · Iniciar sesión' : '¿Primera vez? Crear cuenta';
+    $('auth-password').autocomplete = creatingAccount ? 'new-password' : 'current-password';
+    $('auth-message').textContent = creatingAccount ? 'Usa un correo al que tengas acceso; Supabase podría enviarte un correo de confirmación.' : '';
+  });
+  $('auth-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const email = $('auth-email').value.trim();
+    const password = $('auth-password').value;
+    $('auth-submit').disabled = true;
+    $('auth-message').textContent = creatingAccount ? 'Creando cuenta…' : 'Iniciando sesión…';
+    try {
+      const result = creatingAccount
+        ? await supabaseClient.auth.signUp({ email, password })
+        : await supabaseClient.auth.signInWithPassword({ email, password });
+      if (result.error) throw result.error;
+      if (creatingAccount && !result.data.session) {
+        $('auth-message').textContent = 'Cuenta creada. Revisa tu correo para confirmar la cuenta y luego inicia sesión.';
+        return;
+      }
+      currentUser = result.data.user;
+      if (!currentUser) throw new Error('No se pudo identificar la cuenta.');
+      $('auth-message').textContent = 'Cargando tus datos…';
+      await loadCloudState();
+      hideAuth();
+      initApp();
+      toast('Sesión iniciada y datos sincronizados');
+    } catch (err) {
+      console.error(err);
+      $('auth-message').textContent = err.message || 'No se pudo conectar. Revisa correo y contraseña.';
+    } finally { $('auth-submit').disabled = false; }
+  });
+  $('signout-btn').addEventListener('click', async () => {
+    closeMenu();
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    showAuth('Has cerrado sesión.');
+  });
+  (async () => {
+    showAuth('Comprobando sesión…');
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) { showAuth(error.message); return; }
+    if (data.session) {
+      currentUser = data.session.user;
+      try { await loadCloudState(); hideAuth(); initApp(); }
+      catch (err) { console.error(err); showAuth('No se pudieron cargar los datos: ' + err.message); }
+    } else showAuth();
+  })();
 })();
